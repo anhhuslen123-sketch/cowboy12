@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>?????? ??? ??????? ???????</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #74b9ff, #a29bfe);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #2d3436;
+        }
+        .game-container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+        }
+        h1 {
+            color: #0984e3;
+            margin-bottom: 10px;
+        }
+        .score-board {
+            font-size: 18px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #636e72;
+        }
+        .sound-btn {
+            background-color: #00b894;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-bottom: 25px;
+            transition: 0.2s;
+            box-shadow: 0 4px 10px rgba(0,184,148,0.3);
+        }
+        .sound-btn:hover {
+            background-color: #019875;
+            transform: scale(1.05);
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .option-btn {
+            background-color: #dfe6e9;
+            border: none;
+            padding: 15px;
+            font-size: 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+        .option-btn:hover {
+            background-color: #b2bec3;
+        }
+        .option-btn.correct {
+            background-color: #00b894 !important;
+            color: white;
+        }
+        .option-btn.wrong {
+            background-color: #d63031 !important;
+            color: white;
+        }
+        #message {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            height: 25px;
+        }
+        .next-btn {
+            margin-top: 20px;
+            background-color: #e17055;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+        }
+        .next-btn:hover {
+            background-color: #d63031;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>?? ?????? ??? ??????? ??????? ??</h1>
+        <div class="score-board">????: <span id="score">0</span></div>
+        
+        <p>????? ??????? ???? ?????? ???? ??????? ??:</p>
+        <button class="sound-btn" onclick="playSound()">?? ???? ??????</button>
+
+        <div class="options-grid" id="optionsGrid">
+            <!-- ?????????? ??? ?????????? ????? -->
+        </div>
+
+        <div id="message"></div>
+        <button class="next-btn" id="nextBtn" onclick="nextQuestion()">????????? ?????? ??</button>
+    </div>
+
+    <script>
+        // ??????? ???????? ????? ???? ??????? ????? Web Audio API ??????? ?????
+        const animals = [
+            { name: "?????", soundText: "????? ????? ???: ???-???!", type: "dog" },
+            { name: "????", soundText: "???? ??????? ???: ????-????!", type: "cat" },
+            { name: "????", soundText: "???? ?????? ???: ?????!", type: "cow" },
+            { name: "????", soundText: "???? ?????? ???: ???-???!", type: "sheep" },
+            { name: "?????", soundText: "????? ???????? ???: ????-????!", type: "pig" },
+            { name: "?????", soundText: "????? ???????? ???: ??-??-??-??!", type: "rooster" }
+        ];
+
+        let score = 0;
+        let currentAnimal = null;
+        let isAnswered = false;
+
+        const scoreEl = document.getElementById("score");
+        const optionsGrid = document.getElementById("optionsGrid");
+        const messageEl = document.getElementById("message");
+        const nextBtn = document.getElementById("nextBtn");
+
+        function speak(text) {
+            // ???????? ?????? ?????? (Speech Synthesis) ??????? ???? ??????? ?????
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // ????? ????? ???????
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'mn-MN'; // ?????? ?????? ?????
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function nextQuestion() {
+            isAnswered = false;
+            messageEl.textContent = "";
+            nextBtn.style.display = "none";
+
+            // ??????????????? ??? ?????? ??????
+            const randomIndex = Math.floor(Math.random() * animals.length);
+            currentAnimal = animals[randomIndex];
+
+            // ??????? 3 ??????? ???? ???? 4 ??????? ??????
+            let shuffledOptions = [currentAnimal];
+            while (shuffledOptions.length < 4) {
+                const randomOpt = animals[Math.floor(Math.random() * animals.length)];
+                if (!shuffledOptions.includes(randomOpt)) {
+                    shuffledOptions.push(randomOpt);
+                }
+            }
+
+            // ???????????? ?????
+            shuffledOptions.sort(() => Math.random() - 0.5);
+
+            // ????????? ?????????? ??????
+            optionsGrid.innerHTML = "";
+            shuffledOptions.forEach(animal => {
+                const btn = document.createElement("button");
+                btn.classList.add("option-btn");
+                btn.textContent = animal.name;
+                btn.onclick = () => checkAnswer(animal, btn);
+                optionsGrid.appendChild(btn);
+            });
+
+            // ?????????? ???? ?? ???????? ????
+            playSound();
+        }
+
+        function playSound() {
+            if (currentAnimal) {
+                speak(currentAnimal.soundText);
+            }
+        }
+
+        function checkAnswer(selectedAnimal, buttonElement) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            const allButtons = document.querySelectorAll(".option-btn");
+
+            if (selectedAnimal.name === currentAnimal.name) {
+                score += 10;
+                scoreEl.textContent = score;
+                messageEl.textContent = "?? ??? ?????! ???? ?????.";
+                messageEl.style.color = "#00b894";
+                buttonElement.classList.add("correct");
+                speak("??? ?????!");
+            } else {
+                messageEl.textContent = `? ?????! ??? ??? ${currentAnimal.name} ??????.`;
+                messageEl.style.color = "#d63031";
+                buttonElement.classList.add("wrong");
+                
+                // ??? ????????? ????????? ?????????
+                allButtons.forEach(btn => {
+                    if (btn.textContent === currentAnimal.name) {
+                        btn.classList.add("correct");
+                    }
+                });
+                speak("????? ?????.");
+            }
+
+            nextBtn.style.display = "inline-block";
+        }
+
+        // ????????? ????????
+        nextQuestion();
+    </script>
+</body>
+</html>
